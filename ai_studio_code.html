@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BubbleWash Core — Order & Transaction Hub</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Modern Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#F0F9FF',
+              100: '#E0F2FE',
+              200: '#BAE6FD',
+              400: '#38BDF8',
+              500: '#0EA5E9',
+              600: '#0284C7',
+              700: '#0369A1',
+            },
+            suds: {
+              lavender: '#818CF8',
+              mint: '#34D399',
+              coral: '#FB7185'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* ================= BUBBLE BACKGROUND ANIMATIONS ================= */
+    .bubble-container {
+      position: fixed;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .bubble {
+      position: absolute;
+      bottom: -80px;
+      background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.95), rgba(186, 230, 253, 0.4) 60%, rgba(56, 189, 248, 0.25) 100%);
+      box-shadow: inset -2px -2px 6px rgba(2, 132, 199, 0.2), 
+                  inset 2px 2px 6px rgba(255, 255, 255, 0.8),
+                  0 8px 24px rgba(56, 189, 248, 0.15);
+      border-radius: 50%;
+      backdrop-filter: blur(2px);
+      animation: floatUp 12s linear infinite, wobble 3s ease-in-out infinite alternate;
+    }
+
+    /* Individual Bubble Timings & Variations */
+    .b-1 { width: 36px; height: 36px; left: 8%; animation-duration: 9s, 2.5s; animation-delay: 0s; }
+    .b-2 { width: 64px; height: 64px; left: 22%; animation-duration: 14s, 3.2s; animation-delay: 2s; }
+    .b-3 { width: 22px; height: 22px; left: 38%; animation-duration: 8s, 2s; animation-delay: 4s; }
+    .b-4 { width: 80px; height: 80px; left: 52%; animation-duration: 16s, 3.8s; animation-delay: 1s; }
+    .b-5 { width: 44px; height: 44px; left: 68%; animation-duration: 11s, 2.8s; animation-delay: 5s; }
+    .b-6 { width: 55px; height: 55px; left: 84%; animation-duration: 13s, 3.4s; animation-delay: 3s; }
+    .b-7 { width: 28px; height: 28px; left: 93%; animation-duration: 10s, 2.2s; animation-delay: 6s; }
+
+    @keyframes floatUp {
+      0% {
+        transform: translateY(0) scale(0.85);
+        opacity: 0;
+      }
+      10% {
+        opacity: 0.85;
+      }
+      90% {
+        opacity: 0.85;
+      }
+      100% {
+        transform: translateY(-115vh) scale(1.15);
+        opacity: 0;
+      }
+    }
+
+    @keyframes wobble {
+      0% { margin-left: 0px; }
+      100% { margin-left: 32px; }
+    }
+
+    /* ================= TEXT SHIMMER & WAVE ANIMATIONS ================= */
+    .text-shimmer {
+      background: linear-gradient(90deg, #0284C7 0%, #38BDF8 30%, #818CF8 60%, #0284C7 100%);
+      background-size: 200% auto;
+      color: transparent;
+      -webkit-background-clip: text;
+      background-clip: text;
+      animation: textShine 4s linear infinite;
+    }
+
+    @keyframes textShine {
+      to { background-position: 200% center; }
+    }
+
+    /* Gentle pulsing suds glow */
+    @keyframes pulseGlow {
+      0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(14, 165, 233, 0.4)); }
+      50% { transform: scale(1.04); filter: drop-shadow(0 0 16px rgba(56, 189, 248, 0.7)); }
+    }
+    .animate-pulse-glow {
+      animation: pulseGlow 3s ease-in-out infinite;
+    }
+
+    /* Washing Machine Drum Spin */
+    @keyframes drumSpin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .animate-drum {
+      animation: drumSpin 8s linear infinite;
+    }
+
+    /* ================= BUTTON POP & GLOW EFFECTS ================= */
+    .btn-bubbly {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .btn-bubbly:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 12px 24px -6px rgba(14, 165, 233, 0.45);
+    }
+    .btn-bubbly:active {
+      transform: translateY(1px) scale(0.96);
+    }
+
+    /* Light Sweep Highlight */
+    .btn-bubbly::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -60%;
+      width: 40%;
+      height: 200%;
+      background: linear-gradient(to right, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
+      transform: rotate(30deg);
+      transition: all 0.8s ease;
+    }
+    .btn-bubbly:hover::after {
+      left: 130%;
+    }
+
+    /* Modern Soft Glass Panels */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.95);
+      box-shadow: 0 16px 36px -8px rgba(14, 165, 233, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
+    }
+  </style>
+</head>
+
+<body class="bg-gradient-to-br from-sky-50 via-blue-50/50 to-indigo-50/40 text-neutral-800 font-sans antialiased min-h-screen flex flex-col relative selection:bg-brand-500 selection:text-white">
+
+  <!-- ================= FLOATING SUDS & BUBBLES BACKGROUND ================= -->
+  <div class="bubble-container">
+    <div class="bubble b-1"></div>
+    <div class="bubble b-2"></div>
+    <div class="bubble b-3"></div>
+    <div class="bubble b-4"></div>
+    <div class="bubble b-5"></div>
+    <div class="bubble b-6"></div>
+    <div class="bubble b-7"></div>
+  </div>
+
+  <!-- ================= TOP APP BAR / HEADER ================= -->
+  <header class="glass-card sticky top-0 z-30 border-b border-sky-100 shadow-sm">
+    <div class="max-w-[1600px] mx-auto px-6 h-20 flex items-center justify-between">
+      
+      <!-- Brand Logo with Animated Drum Washer -->
+      <div class="flex items-center space-x-6">
+        <div class="flex items-center space-x-3.5">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-sky-400 text-white flex items-center justify-center shadow-lg shadow-sky-500/30 animate-pulse-glow">
+            <!-- Animated Spin Drum SVG -->
+            <svg class="w-6 h-6 animate-drum" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <circle cx="12" cy="12" r="9" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="8 4"/>
+              <circle cx="12" cy="12" r="3.5" fill="white" fill-opacity="0.9"/>
+              <circle cx="12" cy="7" r="1.2" fill="white"/>
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="text-xl font-extrabold tracking-tight text-shimmer">BubbleWash</span>
+              <span class="bg-brand-100 text-brand-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-brand-200">PRO POS</span>
+            </div>
+            <p class="text-[11px] text-neutral-500 font-medium">Core Orders & Transaction Flow</p>
+          </div>
+        </div>
+
+        <!-- Rounded Global Navigation (CF-06) -->
+        <nav class="hidden md:flex items-center space-x-1.5 pl-6 border-l border-sky-100 text-xs font-bold tracking-wide">
+          <button class="px-4 py-2 rounded-full text-neutral-500 hover:text-brand-600 hover:bg-white/80 transition-all">Dashboard</button>
+          <button class="px-4 py-2 rounded-full text-neutral-500 hover:text-brand-600 hover:bg-white/80 transition-all">Customers</button>
+          <button class="px-4 py-2 rounded-full bg-brand-600 text-white shadow-md shadow-brand-500/30 transition-all">Orders</button>
+          <button onclick="switchView('transactions')" class="px-4 py-2 rounded-full text-neutral-600 hover:text-brand-600 hover:bg-white/80 transition-all">Ledger & History</button>
+        </nav>
+      </div>
+
+      <!-- User Role Pill & Animated Call to Action -->
+      <div class="flex items-center space-x-4">
+        <!-- Cashier Badge -->
+        <div class="hidden sm:flex items-center space-x-2.5 bg-white/90 border border-sky-100 px-3.5 py-1.5 rounded-full shadow-sm">
+          <div class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></div>
+          <div class="text-left">
+            <p class="text-xs font-bold leading-none text-neutral-800">Juan Cruz</p>
+            <p class="text-[10px] text-neutral-400 font-mono">STAFF #101</p>
+          </div>
+        </div>
+
+        <!-- NEW ORDER BUTTON with Bubbly Effect (CF-04) -->
+        <button onclick="openCreateOrderModal()" class="btn-bubbly bg-gradient-to-r from-brand-500 via-sky-500 to-brand-600 hover:from-brand-600 hover:to-sky-400 text-white text-xs font-bold px-5 py-3 rounded-full flex items-center space-x-2 shadow-lg shadow-sky-500/35 border border-sky-300/40">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"></path>
+          </svg>
+          <span class="tracking-wide">CREATE ORDER</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= SUB-HEADER ACTION STRIP ================= -->
+  <div class="max-w-[1600px] mx-auto w-full px-6 pt-6 z-10">
+    <div class="glass-card p-4 rounded-3xl flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Primary View Switcher: Rounded Pill Segmented Control -->
+      <div class="bg-sky-100/60 p-1.5 rounded-full flex items-center space-x-1 border border-sky-200/50">
+        <button id="tab-orders" onclick="switchView('orders')" class="px-5 py-2 text-xs font-bold tracking-wide rounded-full bg-white text-brand-700 shadow-sm transition-all duration-300">
+          🧺 Live Orders Registry (CF-12)
+        </button>
+        <button id="tab-transactions" onclick="switchView('transactions')" class="px-5 py-2 text-xs font-bold tracking-wide rounded-full text-neutral-600 hover:text-brand-600 transition-all duration-300">
+          💳 Customer History & Payments (CF-10)
+        </button>
+      </div>
+
+      <!-- Quick Search Bar with Floating Lens & Rounded Pill (CF-13, CF-14) -->
+      <div class="flex items-center gap-3 w-full md:w-auto">
+        <div class="relative flex-1 md:w-80">
+          <input 
+            type="text" 
+            id="orderSearchInput" 
+            placeholder="Search order # (e.g. ORD-2026-001)..." 
+            class="w-full bg-white/90 border border-sky-200 px-4 py-2.5 pl-10 text-xs font-mono rounded-full focus:ring-2 focus:ring-brand-400 focus:border-brand-500 transition-all shadow-inner placeholder:font-sans"
+            onkeyup="handleSearch(event)"
+          />
+          <!-- Search Icon -->
+          <svg class="w-4 h-4 text-sky-400 absolute left-3.5 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/>
+          </svg>
+          <button onclick="executeOrderSearch()" class="btn-bubbly absolute right-1.5 top-1.5 bottom-1.5 px-3 bg-brand-500 text-white rounded-full text-xs font-bold">
+            Find
+          </button>
+        </div>
+
+        <button onclick="resetSearch()" title="Clear Filters" class="btn-bubbly px-4 py-2.5 rounded-full bg-white border border-sky-200 hover:bg-sky-50 text-neutral-600 text-xs font-bold">
+          Reset
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= BUBBLY POP TOAST FEEDBACK (UI 4-3) ================= -->
+  <div id="toast" class="hidden fixed bottom-8 right-8 z-50 glass-card px-6 py-4 rounded-3xl border border-sky-300 shadow-2xl flex items-center space-x-3.5 text-xs animate-bounce">
+    <div class="w-4 h-4 rounded-full bg-emerald-400 shadow-lg shadow-emerald-400/50 flex items-center justify-center text-[10px] text-white font-bold">✓</div>
+    <span id="toast-message" class="font-bold text-neutral-800">Notification message here</span>
+  </div>
+
+  <!-- ================= MAIN CONTENT CONTAINER ================= -->
+  <main class="max-w-[1600px] mx-auto p-6 flex-1 w-full z-10">
+
+    <!-- VIEW 1: ORDERS SECTION (CF-12, CF-13, CF-14) -->
+    <section id="view-orders" class="space-y-4">
+      
+      <!-- Bubbly Status Pills Filter Bar (Story 4 Statuses) -->
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2 text-xs font-bold">
+          <button onclick="filterByStatus('ALL')" class="status-tab px-4 py-1.5 rounded-full bg-brand-600 text-white shadow-md shadow-brand-500/25 transition-all">
+            All Batches (<span id="count-all">0</span>)
+          </button>
+          <button onclick="filterByStatus('Pending')" class="status-tab px-4 py-1.5 rounded-full bg-white/90 border border-amber-200 text-amber-800 hover:bg-amber-50 transition-all">
+            ⏳ Pending (<span id="count-pending">0</span>)
+          </button>
+          <button onclick="filterByStatus('In Progress')" class="status-tab px-4 py-1.5 rounded-full bg-white/90 border border-blue-200 text-blue-800 hover:bg-blue-50 transition-all">
+            🫧 In Progress (<span id="count-progress">0</span>)
+          </button>
+          <button onclick="filterByStatus('Ready for Pickup')" class="status-tab px-4 py-1.5 rounded-full bg-white/90 border border-emerald-200 text-emerald-800 hover:bg-emerald-50 transition-all">
+            ✨ Ready for Pickup (<span id="count-ready">0</span>)
+          </button>
+          <button onclick="filterByStatus('Collected')" class="status-tab px-4 py-1.5 rounded-full bg-white/90 border border-neutral-200 text-neutral-700 hover:bg-neutral-100 transition-all">
+            📦 Collected (<span id="count-collected">0</span>)
+          </button>
+        </div>
+
+        <div class="text-[11px] font-semibold text-neutral-500 bg-white/60 px-3 py-1 rounded-full border border-sky-100">
+          Showing real-time laundry processing cycles
+        </div>
+      </div>
+
+      <!-- Modern Rounded Glass Table -->
+      <div class="glass-card rounded-3xl overflow-hidden shadow-lg border border-sky-100">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-sky-50/80 border-b border-sky-100 text-sky-900/80 font-bold uppercase text-[11px] tracking-wider">
+                <th class="p-4 pl-6">Order #</th>
+                <th class="p-4">Date Placed</th>
+                <th class="p-4">Customer Name</th>
+                <th class="p-4">Service Type</th>
+                <th class="p-4 text-right">Weight (KG)</th>
+                <th class="p-4 text-right">Subtotal</th>
+                <th class="p-4 text-right">Disc.</th>
+                <th class="p-4 text-right">Total Amount</th>
+                <th class="p-4 text-center">Status</th>
+                <th class="p-4 pr-6 text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTableBody" class="divide-y divide-sky-100/70">
+              <!-- Dynamically populated rows -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State (CF-14: "no matching orders found") -->
+        <div id="noOrdersMessage" class="hidden p-16 text-center bg-white/50">
+          <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-sky-100 flex items-center justify-center text-sky-500 text-2xl animate-bounce">
+            🫧
+          </div>
+          <h4 class="text-base font-extrabold text-neutral-800">no matching orders found</h4>
+          <p class="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">Please check your query or clear filters to view all active laundry batches.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 2: TRANSACTION LEDGER & HISTORY (CF-10, CF-11) -->
+    <section id="view-transactions" class="hidden space-y-4">
+      
+      <!-- Customer Selector Filter Card -->
+      <div class="glass-card p-5 rounded-3xl flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <label class="block text-xs font-extrabold uppercase tracking-wide text-brand-700 mb-1.5">
+            Select Customer Account (CF-10 / CF-11)
+          </label>
+          <div class="relative">
+            <select id="txCustomerSelect" onchange="renderCustomerTransactions()" class="appearance-none border border-sky-200 bg-white/90 px-4 py-2 pr-9 text-xs font-bold rounded-full w-80 shadow-sm focus:ring-2 focus:ring-brand-400">
+              <option value="1">Maria Santos (0917-111-2233)</option>
+              <option value="2">Juan Dela Cruz (0918-222-3344)</option>
+              <option value="3">Empty History Customer (0999-000-0000)</option>
+            </select>
+            <div class="pointer-events-none absolute right-3.5 top-2.5 text-sky-600 font-bold text-xs">▼</div>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="inline-block px-3 py-1 bg-brand-100 text-brand-800 rounded-full font-mono text-[11px] font-semibold">
+            PAYMENTS TABLE & SALES
+          </span>
+          <p class="text-xs text-neutral-500 mt-1">Cross-referencing payments to order_id & user_id</p>
+        </div>
+      </div>
+
+      <!-- Transaction Table -->
+      <div class="glass-card rounded-3xl overflow-hidden shadow-lg border border-sky-100">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-sky-50/80 border-b border-sky-100 text-sky-900/80 font-bold uppercase text-[11px] tracking-wider">
+                <th class="p-4 pl-6">Payment ID</th>
+                <th class="p-4">Payment Date</th>
+                <th class="p-4">Order Ref #</th>
+                <th class="p-4">Service Type</th>
+                <th class="p-4">Method</th>
+                <th class="p-4">Reference #</th>
+                <th class="p-4 text-right">Amount Paid</th>
+                <th class="p-4 text-center">Payment Status</th>
+                <th class="p-4 pr-6 text-center">Order Status</th>
+              </tr>
+            </thead>
+            <tbody id="transactionTableBody" class="divide-y divide-sky-100/70">
+              <!-- Dynamically populated transaction rows -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State (CF-11: "no transactions are available") -->
+        <div id="noTransactionsMessage" class="hidden p-16 text-center bg-white/50">
+          <div class="w-16 h-16 mx-auto mb-3 rounded-full bg-blue-100 flex items-center justify-center text-brand-500 text-2xl animate-bounce">
+            🧼
+          </div>
+          <h4 class="text-base font-extrabold text-neutral-800">no transactions are available</h4>
+          <p class="text-xs text-neutral-500 mt-1 max-w-sm mx-auto">This customer has no prior payment receipts or completed invoices recorded.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= MODAL: CREATE LAUNDRY ORDER (CF-04, CF-05) ================= -->
+  <div id="orderModal" class="hidden fixed inset-0 z-50 bg-sky-950/40 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="glass-card border-2 border-sky-300 max-w-lg w-full rounded-3xl shadow-2xl overflow-hidden transform transition-all duration-300">
+      
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-brand-600 via-sky-500 to-brand-500 text-white p-6 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center text-lg">
+            🫧
+          </div>
+          <div>
+            <h3 class="text-base font-extrabold tracking-tight">Create Laundry Order</h3>
+            <p class="text-[11px] text-sky-100 font-medium">Step 1: Assign customer & laundry parameters</p>
+          </div>
+        </div>
+        <button onclick="closeCreateOrderModal()" class="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center font-bold transition">✕</button>
+      </div>
+
+      <!-- Form Body -->
+      <form id="createOrderForm" onsubmit="handleCreateOrder(event)" class="p-6 space-y-4">
+        
+        <!-- CF-05 Validation Warning -->
+        <div id="formValidationError" class="hidden bg-rose-50 border border-rose-200 rounded-2xl p-3.5 text-xs text-rose-800 flex items-center space-x-2">
+          <span class="text-base">⚠️</span>
+          <span><strong>Required info missing:</strong> Select a customer, service type, and valid weight/price.</span>
+        </div>
+
+        <!-- Customer Selector -->
+        <div>
+          <label class="block text-xs font-bold text-neutral-700 mb-1">Select Customer <span class="text-rose-500">*</span></label>
+          <select id="modalCustomer" class="w-full border border-sky-200 px-4 py-2.5 text-xs font-semibold rounded-2xl bg-white shadow-inner focus:ring-2 focus:ring-brand-400" required>
+            <option value="">-- Choose registered customer --</option>
+            <option value="1">Maria Santos (0917-111-2233)</option>
+            <option value="2">Juan Dela Cruz (0918-222-3344)</option>
+          </select>
+        </div>
+
+        <!-- Service & Order Date -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-neutral-700 mb-1">Service Type <span class="text-rose-500">*</span></label>
+            <select id="modalService" onchange="calculateTotals()" class="w-full border border-sky-200 px-3.5 py-2.5 text-xs font-semibold rounded-2xl bg-white focus:ring-2 focus:ring-brand-400" required>
+              <option value="">-- Choose Service --</option>
+              <option value="1" data-price="35.00">Wash & Fold (₱35/kg)</option>
+              <option value="2" data-price="75.00">Dry Cleaning (₱75/kg)</option>
+              <option value="3" data-price="150.00">Heavy Bedding (₱150/load)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-neutral-700 mb-1">Order Date <span class="text-rose-500">*</span></label>
+            <input type="datetime-local" id="modalOrderDate" class="w-full border border-sky-200 px-3 py-2 text-xs font-mono rounded-2xl bg-white focus:ring-2 focus:ring-brand-400" required />
+          </div>
+        </div>
+
+        <!-- Bubbly Calculation Box -->
+        <div class="bg-gradient-to-br from-sky-50 to-blue-50/70 p-4 rounded-2xl border border-sky-200/80 space-y-3">
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="block text-[10px] font-bold uppercase text-sky-800 mb-1">Weight (KG)</label>
+              <input type="number" step="0.1" min="0.1" value="5.0" id="modalWeight" oninput="calculateTotals()" class="w-full border border-sky-200 px-3 py-1.5 text-xs font-mono rounded-xl bg-white text-center font-bold" />
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold uppercase text-sky-800 mb-1">Subtotal (₱)</label>
+              <input type="number" id="modalSubtotal" readonly class="w-full border border-sky-200 px-3 py-1.5 text-xs font-mono rounded-xl bg-sky-100/50 text-center font-bold text-sky-900" />
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-bold uppercase text-sky-800 mb-1">Discount (₱)</label>
+              <input type="number" step="1" min="0" value="0" id="modalDiscount" oninput="calculateTotals()" class="w-full border border-sky-200 px-3 py-1.5 text-xs font-mono rounded-xl bg-white text-center font-bold" />
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between pt-2 border-t border-sky-200/60">
+            <span class="text-xs font-bold text-sky-900">Total Calculated Amount:</span>
+            <span id="modalTotalPreview" class="text-lg font-black text-brand-700 font-mono">₱0.00</span>
+          </div>
+        </div>
+
+        <!-- Completion Estimated -->
+        <div>
+          <label class="block text-xs font-bold text-neutral-700 mb-1">Estimated Completion</label>
+          <input type="datetime-local" id="modalEstCompletion" class="w-full border border-sky-200 px-3 py-2 text-xs font-mono rounded-2xl bg-white" />
+        </div>
+
+        <!-- Modal Actions with Rounded Bubbly Buttons -->
+        <div class="flex items-center justify-end space-x-3 pt-3">
+          <button type="button" onclick="closeCreateOrderModal()" class="px-5 py-2.5 rounded-full border border-neutral-300 text-neutral-600 hover:bg-neutral-100 text-xs font-bold transition">
+            Cancel
+          </button>
+          <button type="submit" class="btn-bubbly bg-gradient-to-r from-brand-500 to-sky-500 text-white px-6 py-2.5 rounded-full text-xs font-extrabold uppercase tracking-wider shadow-md shadow-brand-500/30">
+            Confirm & Save Order
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: STATUS UPDATE (CF-08, CF-09) ================= -->
+  <div id="statusModal" class="hidden fixed inset-0 z-50 bg-sky-950/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card border border-sky-200 max-w-sm w-full rounded-3xl p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center space-x-3 border-b border-sky-100 pb-3">
+        <div class="w-9 h-9 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center text-sm">
+          🔄
+        </div>
+        <div>
+          <h3 class="text-sm font-extrabold text-neutral-800">Update Order Status</h3>
+          <p class="text-[11px] font-mono text-brand-600 font-bold" id="statusModalOrderNum">ORD-2026-XXX</p>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-neutral-700 mb-1.5">Advance Laundry Stage:</label>
+        <select id="statusSelect" class="w-full border border-sky-200 px-4 py-2.5 text-xs font-bold rounded-2xl bg-white focus:ring-2 focus:ring-brand-400">
+          <option value="Pending">⏳ Pending</option>
+          <option value="In Progress">🫧 In Progress (Washing/Drying)</option>
+          <option value="Ready for Pickup">✨ Ready for Pickup</option>
+          <option value="Collected">📦 Collected</option>
+        </select>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2">
+        <button onclick="closeStatusModal()" class="px-4 py-2 rounded-full border border-neutral-300 text-neutral-600 text-xs font-bold">
+          Cancel
+        </button>
+        <button onclick="saveOrderStatus()" class="btn-bubbly px-5 py-2 rounded-full bg-brand-600 text-white text-xs font-extrabold shadow-md shadow-brand-500/30">
+          Update Status
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= JAVASCRIPT STATE ENGINE ================= -->
+  <script>
+    let currentFilterStatus = 'ALL';
+    let currentEditingOrderId = null;
+
+    const customers = {
+      1: { customer_id: 1, name: "Maria Santos", phone: "0917-111-2233" },
+      2: { customer_id: 2, name: "Juan Dela Cruz", phone: "0918-222-3344" },
+      3: { customer_id: 3, name: "Empty History Customer", phone: "0999-000-0000" }
+    };
+
+    const services = {
+      1: { service_id: 1, service_name: "Wash & Fold", unit_price: 35.00, pricing_unit: "per kg" },
+      2: { service_id: 2, service_name: "Dry Cleaning", unit_price: 75.00, pricing_unit: "per kg" },
+      3: { service_id: 3, service_name: "Heavy Bedding", unit_price: 150.00, pricing_unit: "per load" }
+    };
+
+    let orders = [
+      {
+        order_id: 1,
+        order_number: "ORD-2026-001",
+        customer_id: 1,
+        service_id: 1,
+        created_by: 101,
+        order_date: "2026-11-09 08:30",
+        weight: 6.5,
+        subtotal: 227.50,
+        discount: 0.00,
+        total_amount: 227.50,
+        order_status: "Pending",
+        estimated_completion: "2026-11-10 17:00"
+      },
+      {
+        order_id: 2,
+        order_number: "ORD-2026-002",
+        customer_id: 2,
+        service_id: 2,
+        created_by: 101,
+        order_date: "2026-11-09 10:15",
+        weight: 3.0,
+        subtotal: 225.00,
+        discount: 25.00,
+        total_amount: 200.00,
+        order_status: "In Progress",
+        estimated_completion: "2026-11-11 12:00"
+      },
+      {
+        order_id: 3,
+        order_number: "ORD-2026-003",
+        customer_id: 1,
+        service_id: 3,
+        created_by: 101,
+        order_date: "2026-11-08 14:00",
+        weight: 1.0,
+        subtotal: 150.00,
+        discount: 0.00,
+        total_amount: 150.00,
+        order_status: "Ready for Pickup",
+        estimated_completion: "2026-11-09 16:00"
+      },
+      {
+        order_id: 4,
+        order_number: "ORD-2026-004",
+        customer_id: 2,
+        service_id: 1,
+        created_by: 101,
+        order_date: "2026-11-07 09:00",
+        weight: 8.0,
+        subtotal: 280.00,
+        discount: 30.00,
+        total_amount: 250.00,
+        order_status: "Collected",
+        estimated_completion: "2026-11-08 11:00"
+      }
+    ];
+
+    let payments = [
+      {
+        payment_id: 1001,
+        order_id: 1,
+        customer_id: 1,
+        received_by: 101,
+        payment_date: "2026-11-09 08:35",
+        amount_paid: 227.50,
+        payment_method: "Cash",
+        payment_status: "Paid",
+        reference_number: "CASH-REC-001"
+      },
+      {
+        payment_id: 1002,
+        order_id: 3,
+        customer_id: 1,
+        received_by: 101,
+        payment_date: "2026-11-08 14:05",
+        amount_paid: 150.00,
+        payment_method: "GCash",
+        payment_status: "Paid",
+        reference_number: "GCASH-99881123"
+      },
+      {
+        payment_id: 1003,
+        order_id: 4,
+        customer_id: 2,
+        received_by: 101,
+        payment_date: "2026-11-07 09:10",
+        amount_paid: 250.00,
+        payment_method: "Cash",
+        payment_status: "Paid",
+        reference_number: "CASH-REC-004"
+      }
+    ];
+
+    // ================= BUBBLY STATUS BADGE GENERATOR =================
+    function getStatusBadge(status) {
+      switch(status) {
+        case 'Pending':
+          return `<span class="inline-flex items-center space-x-1.5 bg-amber-50 text-amber-800 border border-amber-300 px-3 py-1 rounded-full font-bold text-[10px] shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span><span>Pending</span></span>`;
+        case 'In Progress':
+          return `<span class="inline-flex items-center space-x-1.5 bg-blue-50 text-blue-800 border border-blue-300 px-3 py-1 rounded-full font-bold text-[10px] shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span><span>In Progress</span></span>`;
+        case 'Ready for Pickup':
+          return `<span class="inline-flex items-center space-x-1.5 bg-emerald-50 text-emerald-800 border border-emerald-300 px-3 py-1 rounded-full font-bold text-[10px] shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span><span>Ready for Pickup</span></span>`;
+        case 'Collected':
+          return `<span class="inline-flex items-center space-x-1.5 bg-neutral-100 text-neutral-600 border border-neutral-300 px-3 py-1 rounded-full font-bold text-[10px] shadow-sm"><span class="w-1.5 h-1.5 rounded-full bg-neutral-400"></span><span>Collected</span></span>`;
+        default:
+          return `<span class="px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[10px]">${status}</span>`;
+      }
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      const msg = document.getElementById('toast-message');
+      msg.textContent = message;
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 4500);
+    }
+
+    // ================= VIEW TOGGLE =================
+    function switchView(viewName) {
+      const ordersView = document.getElementById('view-orders');
+      const txView = document.getElementById('view-transactions');
+      const tabOrders = document.getElementById('tab-orders');
+      const tabTx = document.getElementById('tab-transactions');
+
+      if (viewName === 'orders') {
+        ordersView.classList.remove('hidden');
+        txView.classList.add('hidden');
+        tabOrders.className = "px-5 py-2 text-xs font-bold tracking-wide rounded-full bg-white text-brand-700 shadow-sm transition-all";
+        tabTx.className = "px-5 py-2 text-xs font-bold tracking-wide rounded-full text-neutral-600 hover:text-brand-600 transition-all";
+        renderOrders();
+      } else {
+        ordersView.classList.add('hidden');
+        txView.classList.remove('hidden');
+        tabTx.className = "px-5 py-2 text-xs font-bold tracking-wide rounded-full bg-white text-brand-700 shadow-sm transition-all";
+        tabOrders.className = "px-5 py-2 text-xs font-bold tracking-wide rounded-full text-neutral-600 hover:text-brand-600 transition-all";
+        renderCustomerTransactions();
+      }
+    }
+
+    // ================= RENDER ORDERS (CF-12) =================
+    function renderOrders(dataset = null) {
+      const tableBody = document.getElementById('ordersTableBody');
+      const noResults = document.getElementById('noOrdersMessage');
+      const list = dataset || orders;
+
+      let filtered = (currentFilterStatus === 'ALL') 
+        ? list 
+        : list.filter(o => o.order_status === currentFilterStatus);
+
+      // Status counters
+      document.getElementById('count-all').textContent = orders.length;
+      document.getElementById('count-pending').textContent = orders.filter(o => o.order_status === 'Pending').length;
+      document.getElementById('count-progress').textContent = orders.filter(o => o.order_status === 'In Progress').length;
+      document.getElementById('count-ready').textContent = orders.filter(o => o.order_status === 'Ready for Pickup').length;
+      document.getElementById('count-collected').textContent = orders.filter(o => o.order_status === 'Collected').length;
+
+      tableBody.innerHTML = '';
+
+      if (filtered.length === 0) {
+        noResults.classList.remove('hidden');
+        return;
+      }
+      noResults.classList.add('hidden');
+
+      filtered.forEach(order => {
+        const customer = customers[order.customer_id] || { name: 'Unknown' };
+        const service = services[order.service_id] || { service_name: 'Custom' };
+
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-sky-50/60 transition-colors";
+        tr.innerHTML = `
+          <td class="p-4 pl-6 font-mono font-bold text-brand-700">${order.order_number}</td>
+          <td class="p-4 font-mono text-neutral-500 text-[11px]">${order.order_date}</td>
+          <td class="p-4 font-bold text-neutral-800">${customer.name}</td>
+          <td class="p-4 text-neutral-700">${service.service_name}</td>
+          <td class="p-4 text-right font-mono font-semibold">${order.weight ? order.weight.toFixed(2) : '-'}</td>
+          <td class="p-4 text-right font-mono text-neutral-600">₱${order.subtotal.toFixed(2)}</td>
+          <td class="p-4 text-right font-mono text-neutral-400">₱${order.discount.toFixed(2)}</td>
+          <td class="p-4 text-right font-mono font-black text-brand-700">₱${order.total_amount.toFixed(2)}</td>
+          <td class="p-4 text-center">${getStatusBadge(order.order_status)}</td>
+          <td class="p-4 pr-6 text-center">
+            <button onclick="openStatusModal(${order.order_id})" class="btn-bubbly px-3 py-1.5 rounded-full bg-white border border-sky-300 text-brand-700 hover:bg-brand-50 font-bold text-[10px] shadow-sm">
+              Change Status
+            </button>
+          </td>
+        `;
+        tableBody.appendChild(tr);
+      });
+    }
+
+    // ================= SEARCH FUNCTIONALITY (CF-13, CF-14) =================
+    function handleSearch(e) {
+      if (e.key === 'Enter') executeOrderSearch();
+    }
+
+    function executeOrderSearch() {
+      const q = document.getElementById('orderSearchInput').value.trim().toLowerCase();
+      if (!q) {
+        renderOrders();
+        return;
+      }
+      const matched = orders.filter(o => o.order_number.toLowerCase().includes(q));
+      renderOrders(matched);
+    }
+
+    function resetSearch() {
+      document.getElementById('orderSearchInput').value = '';
+      currentFilterStatus = 'ALL';
+      renderOrders();
+    }
+
+    function filterByStatus(status) {
+      currentFilterStatus = status;
+      renderOrders();
+    }
+
+    // ================= TRANSACTION LEDGER (CF-10, CF-11) =================
+    function renderCustomerTransactions() {
+      const customerId = parseInt(document.getElementById('txCustomerSelect').value);
+      const tableBody = document.getElementById('transactionTableBody');
+      const noTxMsg = document.getElementById('noTransactionsMessage');
+
+      const customerPayments = payments.filter(p => p.customer_id === customerId);
+      tableBody.innerHTML = '';
+
+      if (customerPayments.length === 0) {
+        noTxMsg.classList.remove('hidden'); // CF-11 empty state triggered
+        return;
+      }
+      noTxMsg.classList.add('hidden');
+
+      customerPayments.forEach(tx => {
+        const order = orders.find(o => o.order_id === tx.order_id) || {};
+        const service = services[order.service_id] || { service_name: "General Service" };
+
+        const row = document.createElement('tr');
+        row.className = "hover:bg-sky-50/60 transition-colors";
+        row.innerHTML = `
+          <td class="p-4 pl-6 font-mono font-bold text-neutral-800">TX-${tx.payment_id}</td>
+          <td class="p-4 font-mono text-neutral-500 text-[11px]">${tx.payment_date}</td>
+          <td class="p-4 font-mono font-bold text-brand-600">${order.order_number || 'N/A'}</td>
+          <td class="p-4 text-neutral-700">${service.service_name}</td>
+          <td class="p-4 font-semibold">${tx.payment_method}</td>
+          <td class="p-4 font-mono text-neutral-500">${tx.reference_number || '-'}</td>
+          <td class="p-4 text-right font-mono font-black text-emerald-600">₱${tx.amount_paid.toFixed(2)}</td>
+          <td class="p-4 text-center">
+            <span class="px-3 py-1 rounded-full font-bold text-[10px] bg-emerald-50 text-emerald-800 border border-emerald-300">
+              ${tx.payment_status}
+            </span>
+          </td>
+          <td class="p-4 pr-6 text-center">${getStatusBadge(order.order_status || 'Pending')}</td>
+        `;
+        tableBody.appendChild(row);
+      });
+    }
+
+    // ================= CREATE ORDER LOGIC (CF-04, CF-05) =================
+    function openCreateOrderModal() {
+      const now = new Date();
+      document.getElementById('modalOrderDate').value = now.toISOString().slice(0, 16);
+      
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      document.getElementById('modalEstCompletion').value = tomorrow.toISOString().slice(0, 16);
+
+      document.getElementById('formValidationError').classList.add('hidden');
+      document.getElementById('createOrderForm').reset();
+      document.getElementById('modalOrderDate').value = now.toISOString().slice(0, 16);
+      calculateTotals();
+      document.getElementById('orderModal').classList.remove('hidden');
+    }
+
+    function closeCreateOrderModal() {
+      document.getElementById('orderModal').classList.add('hidden');
+    }
+
+    function calculateTotals() {
+      const serviceSelect = document.getElementById('modalService');
+      const opt = serviceSelect.options[serviceSelect.selectedIndex];
+      const price = parseFloat(opt?.getAttribute('data-price')) || 0;
+      const weight = parseFloat(document.getElementById('modalWeight').value) || 1;
+      const discount = parseFloat(document.getElementById('modalDiscount').value) || 0;
+
+      const subtotal = price * weight;
+      const total = Math.max(0, subtotal - discount);
+
+      document.getElementById('modalSubtotal').value = subtotal.toFixed(2);
+      document.getElementById('modalTotalPreview').textContent = '₱' + total.toFixed(2);
+    }
+
+    function handleCreateOrder(e) {
+      e.preventDefault();
+
+      const customerId = document.getElementById('modalCustomer').value;
+      const serviceId = document.getElementById('modalService').value;
+      const orderDate = document.getElementById('modalOrderDate').value;
+      const weight = parseFloat(document.getElementById('modalWeight').value) || 1.0;
+      const subtotal = parseFloat(document.getElementById('modalSubtotal').value) || 0;
+      const discount = parseFloat(document.getElementById('modalDiscount').value) || 0;
+      const totalAmount = Math.max(0, subtotal - discount);
+      const estCompletion = document.getElementById('modalEstCompletion').value;
+
+      // Acceptance Criteria CF-05 validation check
+      if (!customerId || !serviceId || !orderDate || subtotal <= 0) {
+        document.getElementById('formValidationError').classList.remove('hidden');
+        return;
+      }
+
+      // Generate sequence order number (CF-04)
+      const nextId = orders.length + 1;
+      const orderNumber = `ORD-2026-${String(nextId).padStart(3, '0')}`;
+
+      const newOrder = {
+        order_id: nextId,
+        order_number: orderNumber,
+        customer_id: parseInt(customerId),
+        service_id: parseInt(serviceId),
+        created_by: 101,
+        order_date: orderDate.replace('T', ' '),
+        weight: weight,
+        subtotal: subtotal,
+        discount: discount,
+        total_amount: totalAmount,
+        order_status: "Pending",
+        estimated_completion: estCompletion ? estCompletion.replace('T', ' ') : null
+      };
+
+      orders.unshift(newOrder);
+
+      closeCreateOrderModal();
+      renderOrders();
+
+      // UI 4-3: A clear success message and generated order number are displayed
+      showToast(`🫧 Order Created: #${orderNumber} generated successfully!`);
+    }
+
+    // ================= STATUS UPDATE LOGIC (CF-08, CF-09) =================
+    function openStatusModal(orderId) {
+      currentEditingOrderId = orderId;
+      const order = orders.find(o => o.order_id === orderId);
+      if (!order) return;
+
+      document.getElementById('statusModalOrderNum').textContent = `${order.order_number} (${customers[order.customer_id]?.name || ''})`;
+      document.getElementById('statusSelect').value = order.order_status;
+      document.getElementById('statusModal').classList.remove('hidden');
+    }
+
+    function closeStatusModal() {
+      document.getElementById('statusModal').classList.add('hidden');
+      currentEditingOrderId = null;
+    }
+
+    function saveOrderStatus() {
+      if (!currentEditingOrderId) return;
+      const newStatus = document.getElementById('statusSelect').value;
+
+      const orderIndex = orders.findIndex(o => o.order_id === currentEditingOrderId);
+      if (orderIndex > -1) {
+        orders[orderIndex].order_status = newStatus;
+        showToast(`✨ Order #${orders[orderIndex].order_number} shifted to: ${newStatus}`);
+      }
+
+      closeStatusModal();
+      renderOrders();
+    }
+
+    // Initialize View
+    document.addEventListener('DOMContentLoaded', () => {
+      renderOrders();
+    });
+  </script>
+
+</body>
+</html>
